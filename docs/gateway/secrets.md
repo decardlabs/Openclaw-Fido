@@ -242,6 +242,71 @@ Optional per-id errors:
 }
 ```
 
+### FIDO2 Hardware Key
+
+FIDO2 provider 使用硬件安全密钥存储敏感信息。每次访问密钥都需要物理触摸硬件。
+
+**Prerequisites:**
+
+1. Install the FIDO2 key manager tool:
+   ```bash
+   cd scripts/fido2-keys
+   npm install
+   npm run build
+   ```
+
+2. Install the resolver:
+   ```bash
+   sudo cp scripts/fido2-resolver.mjs /usr/local/bin/openclaw-fido2-resolver
+   sudo chmod +x /usr/local/bin/openclaw-fido2-resolver
+   ```
+
+3. Store your keys:
+   ```bash
+   node scripts/fido2-keys/dist/cli.js set openai-api-key "OpenAI API Key"
+   # Enter your key when prompted, then touch your FIDO2 hardware
+   ```
+
+**Configuration:**
+
+```json5
+{
+  secrets: {
+    providers: {
+      fido2: {
+        source: "exec",
+        command: "/usr/local/bin/openclaw-fido2-resolver",
+        args: [],
+        passEnv: ["HOME", "DISPLAY"],
+        jsonOnly: true,
+        timeoutMs: 30000,
+        allowSymlinkCommand: true,
+        trustedDirs: ["/usr/local/bin"],
+      },
+    },
+    defaults: {
+      exec: "fido2",
+    },
+  },
+  models: {
+    providers: {
+      openai: {
+        baseUrl: "https://api.openai.com/v1",
+        models: [{ id: "gpt-4", name: "GPT-4" }],
+        apiKey: { source: "exec", provider: "fido2", id: "openai-api-key" },
+      },
+      anthropic: {
+        baseUrl: "https://api.anthropic.com/v1",
+        models: [{ id: "claude-sonnet-4", name: "Claude Sonnet 4" }],
+        apiKey: { source: "exec", provider: "fido2", id: "anthropic-api-key" },
+      },
+    },
+  },
+}
+```
+
+For complete documentation, see [FIDO2 Secrets Provider](/gateway/secrets-fido2).
+
 ## In-scope fields (v1)
 
 ### `~/.openclaw/openclaw.json`

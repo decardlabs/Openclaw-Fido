@@ -210,6 +210,74 @@
 - Release guardrails: do not change version numbers without operator’s explicit consent; always ask permission before running any npm publish/release step.
 - Beta release guardrail: when using a beta Git tag (for example `vYYYY.M.D-beta.N`), publish npm with a matching beta version suffix (for example `YYYY.M.D-beta.N`) rather than a plain version on `--tag beta`; otherwise the plain version name gets consumed/blocked.
 
+## FIDO2 Secrets Provider (Hardware Key Storage)
+
+OpenClaw supports FIDO2/WebAuthn hardware keys for secure credential storage. When configured, any secret access requires physical touch of the hardware.
+
+**Setup:**
+
+1. Install FIDO2 key manager tool:
+   ```bash
+   cd scripts/fido2-keys
+   npm install
+   npm run build
+   ```
+
+2. Install resolver:
+   ```bash
+   sudo cp scripts/fido2-resolver.mjs /usr/local/bin/openclaw-fido2-resolver
+   sudo chmod +x /usr/local/bin/openclaw-fido2-resolver
+   ```
+
+3. Store keys:
+   ```bash
+   node scripts/fido2-keys/dist/cli.js set openai-api-key "OpenAI API Key"
+   # Enter key, then touch FIDO2 hardware
+   ```
+
+**Configuration example:**
+
+```json5
+{
+  secrets: {
+    providers: {
+      fido2: {
+        source: "exec",
+        command: "/usr/local/bin/openclaw-fido2-resolver",
+        jsonOnly: true,
+        timeoutMs: 30000,
+      },
+    },
+    defaults: {
+      exec: "fido2",
+    },
+  },
+  models: {
+    providers: {
+      openai: {
+        apiKey: { source: "exec", provider: "fido2", id: "openai-api-key" },
+      },
+    },
+  },
+}
+```
+
+**Usage:**
+
+- List keys: `node scripts/fido2-keys/dist/cli.js list`
+- Get key: `node scripts/fido2-keys/dist/cli.js get <id>`
+- Delete key: `node scripts/fido2-keys/dist/cli.js delete <id>`
+- Check status: `node scripts/fido2-keys/dist/cli.js status`
+
+**Security notes:**
+
+- Keys are encrypted with AES-256-GCM before storage
+- Encryption key is derived from FIDO2 credential using PBKDF2
+- Hardware touch required for each access
+- Local file storage at `~/.openclaw/fido2-keys.json`
+
+**See also:** [FIDO2 Secrets Provider](docs/gateway/secrets-fido2.md)
+
 ## NPM + 1Password (publish/verify)
 
 - Use the 1password skill; all `op` commands must run inside a fresh tmux session.
